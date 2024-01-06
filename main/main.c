@@ -4,8 +4,15 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
+#include "driver/gpio.h"
+
 #include "VRKernel.h"
 #include "WiFiKernel.h"
+
+/* Private typedef -----------------------------------------------------------*/
+#define GPIO_GLED_PIN 38
+/* END Private typedef */
+
 /* Private function prototypes -----------------------------------------------*/
 /*Mutex*/
 int CreateMyMutex(void **MutexHandel);
@@ -15,6 +22,8 @@ int UnlockMyMutex(void *MutexHandel);
 
 int PrintHandlerForRead(void *param);
 int PrintHandlerForWrite(void *param);
+
+void LedToggleThread(void *arg);
 /* END Private function prototypes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -42,12 +51,42 @@ void app_main(void)
     HandlersForUser0.HandForRead = PrintHandlerForRead;
     HandlersForUser0.HandForWrite = PrintHandlerForWrite;
     SetHandlerForReg(SYS_COMPILE_TIME, &HandlersForUser0);
+
+    uint32_t version = 0;
+    ReadVirtualReg(SYS_COMPILE_TIME, &version);
     InitWifiKernel();
-    uint32_t TmpRegs = 0;
+    xTaskCreate(LedToggleThread, "LedTask", 2596, NULL, 5, NULL);
+    vTaskDelete(NULL);
+   
     while (1)
     {
-        ReadVirtualReg(SYS_COMPILE_TIME, &TmpRegs);
+
+        printf("error it's will never start\r\n");
         vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
+}
+
+void LedToggleThread(void *arg)
+{
+    uint8_t LedState = 0;
+    uint16_t pin = GPIO_GLED_PIN;
+    gpio_config_t LedGpioConf = {};
+    LedGpioConf.intr_type = GPIO_INTR_DISABLE;
+    LedGpioConf.mode = GPIO_MODE_OUTPUT;
+    LedGpioConf.pin_bit_mask = (1ULL << pin);
+    LedGpioConf.pull_down_en = 0;
+    LedGpioConf.pull_up_en = 0;
+    gpio_reset_pin(pin);
+
+    if(gpio_config(&LedGpioConf)!=ESP_OK)
+    {
+        printf("Err\r\n");
+    }
+    while (1)
+    {
+        gpio_set_level(pin, LedState);
+        LedState = LedState > 0 ? 0 : 1;
+        vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 }
 
