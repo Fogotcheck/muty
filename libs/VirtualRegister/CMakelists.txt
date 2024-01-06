@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.15)
+
+set(VirtualSrc "${CMAKE_CURRENT_SOURCE_DIR}/kernel/src/VRMem.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernel/src/VRKernel.c")
+
+add_library(VirtualRegister "${VirtualSrc}")
+
+set(VisiblePublicHead
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernel/head"
+    "${CMAKE_CURRENT_SOURCE_DIR}/config"   
+)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/port")
+target_link_libraries(VirtualRegister VirtualPort)
+
+target_include_directories(VirtualRegister PUBLIC "${VisiblePublicHead}")
+
