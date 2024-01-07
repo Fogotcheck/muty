@@ -8,6 +8,7 @@
 
 #include "VRKernel.h"
 #include "WiFiKernel.h"
+#include "CMotor.h"
 
 /* Private typedef -----------------------------------------------------------*/
 #define GPIO_GLED_PIN 38
@@ -47,20 +48,51 @@ void app_main(void)
         printf("Error::init regs map\r\n");
     }
 
-    VirtualRegsHandlers_t HandlersForUser0;
-    HandlersForUser0.HandForRead = PrintHandlerForRead;
-    HandlersForUser0.HandForWrite = PrintHandlerForWrite;
-    SetHandlerForReg(SYS_COMPILE_TIME, &HandlersForUser0);
+    VirtualRegsHandlers_t Version;
+    Version.HandForRead = PrintHandlerForRead;
+    Version.HandForWrite = PrintHandlerForWrite;
+    SetHandlerForReg(SYS_COMPILE_TIME, &Version);
 
     uint32_t version = 0;
     ReadVirtualReg(SYS_COMPILE_TIME, &version);
     InitWifiKernel();
+
+    InitCMotor();
+    VirtualRegsHandlers_t Motor;
+    Motor.ErrHandler = NULL;
+    Motor.HandForRead = NULL;
+    Motor.HandForWrite = UpdateValLMotor;
+    SetHandlerForReg(REG_LMOTOR, &Motor);
+
+    Motor.HandForWrite = UpdateValRMotor;
+    SetHandlerForReg(REG_RMOTOR, &Motor);
+
     xTaskCreate(LedToggleThread, "LedTask", 2596, NULL, 5, NULL);
+
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    int16_t TmpDuty = -4096;
+    uint32_t reg = (uint32_t)TmpDuty;
+    printf("TmpDuty::\t0x%lx\r\n", reg);
+    WriteVirtualReg(REG_LMOTOR, &reg);
+    WriteVirtualReg(REG_RMOTOR, &reg);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    TmpDuty = 8192;
+    reg = (uint32_t)TmpDuty;
+    printf("TmpDuty::\t0x%lx\r\n", reg);
+    WriteVirtualReg(REG_LMOTOR, &reg);
+    WriteVirtualReg(REG_RMOTOR, &reg);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    TmpDuty = 0;
+    reg = (uint32_t)TmpDuty;
+    printf("TmpDuty::\t0x%lx\r\n", reg);
+    WriteVirtualReg(REG_LMOTOR, &reg);
+    WriteVirtualReg(REG_RMOTOR, &reg);
+    
     vTaskDelete(NULL);
-   
     while (1)
     {
-
         printf("error it's will never start\r\n");
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
@@ -78,7 +110,7 @@ void LedToggleThread(void *arg)
     LedGpioConf.pull_up_en = 0;
     gpio_reset_pin(pin);
 
-    if(gpio_config(&LedGpioConf)!=ESP_OK)
+    if (gpio_config(&LedGpioConf) != ESP_OK)
     {
         printf("Err\r\n");
     }

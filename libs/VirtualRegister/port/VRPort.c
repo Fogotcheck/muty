@@ -115,6 +115,7 @@ int WriteVirtualReg(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 void HandlerWriteGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 {
     uint32_t ret = 0;
+    VAL(VirtRegAddress) = *VirtualRegValue;
     if (VirtHandlers[VirtRegAddress].HandForWrite != NULL)
     {
         if (SynchronMemAccess(VirtRegAddress))
@@ -138,7 +139,7 @@ void HandlerWriteGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
         }
 #endif
     }
-    VAL(VirtRegAddress) = *VirtualRegValue;
+    
 }
 
 void LockAccessVirtMem(void)
@@ -163,7 +164,7 @@ void UnLockAccessVirtMem(void)
 void HandlerReadGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 {
     uint32_t ret = 0;
-
+    *VirtualRegValue = VAL(VirtRegAddress);
     if (VirtHandlers[VirtRegAddress].HandForRead != NULL)
     {
         if (SynchronMemAccess(VirtRegAddress))
@@ -185,7 +186,7 @@ void HandlerReadGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
         }
 #endif
     }
-    *VirtualRegValue = VAL(VirtRegAddress);
+    
 }
 
 #if USE_MUTEX == 0
