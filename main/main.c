@@ -8,6 +8,7 @@
 
 #include "VRKernel.h"
 #include "WiFiKernel.h"
+#include "MqttClient.h"
 #include "CMotor.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -25,6 +26,7 @@ int PrintHandlerForRead(void *param);
 int PrintHandlerForWrite(void *param);
 
 void LedToggleThread(void *arg);
+void TestMotorThread(void *arg);
 /* END Private function prototypes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -55,12 +57,19 @@ void app_main(void)
 
     uint32_t version = 0;
     ReadVirtualReg(SYS_COMPILE_TIME, &version);
-    InitWifiKernel();
+    if ((InitWifiKernel() != ESP_OK) || (InitMqttClient() != ESP_OK))
+    {
+        while (1)
+        {
+            printf("error wifi accert\r\n");
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+        }
+    }
 
     InitCMotor();
     VirtualRegsHandlers_t Motor;
-    Motor.ErrHandler = NULL;
-    Motor.HandForRead = NULL;
+    Motor.ErrHandler = CMotorErrorsHandler;
+    Motor.HandForRead = PrintHandlerForRead;
     Motor.HandForWrite = UpdateValLMotor;
     SetHandlerForReg(REG_LMOTOR, &Motor);
 
@@ -68,28 +77,8 @@ void app_main(void)
     SetHandlerForReg(REG_RMOTOR, &Motor);
 
     xTaskCreate(LedToggleThread, "LedTask", 2596, NULL, 5, NULL);
+    // xTaskCreate(TestMotorThread, "MotorTask", 2048, NULL, 4, NULL);
 
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    int16_t TmpDuty = -4096;
-    uint32_t reg = (uint32_t)TmpDuty;
-    printf("TmpDuty::\t0x%lx\r\n", reg);
-    WriteVirtualReg(REG_LMOTOR, &reg);
-    WriteVirtualReg(REG_RMOTOR, &reg);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    TmpDuty = 8192;
-    reg = (uint32_t)TmpDuty;
-    printf("TmpDuty::\t0x%lx\r\n", reg);
-    WriteVirtualReg(REG_LMOTOR, &reg);
-    WriteVirtualReg(REG_RMOTOR, &reg);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    TmpDuty = 0;
-    reg = (uint32_t)TmpDuty;
-    printf("TmpDuty::\t0x%lx\r\n", reg);
-    WriteVirtualReg(REG_LMOTOR, &reg);
-    WriteVirtualReg(REG_RMOTOR, &reg);
-    
     vTaskDelete(NULL);
     while (1)
     {
@@ -160,6 +149,27 @@ int UnlockMyMutex(void *MutexHandel)
         return 0;
     }
     return 0;
+}
+
+void TestMotorThread(void *arg)
+{
+    uint32_t reg = 0;
+    int16_t TmpDuty = 0;
+    while (1)
+    {
+        if (TmpDuty > 8192)
+        {
+            TmpDuty = -8192;
+        }
+        reg = (uint16_t)TmpDuty;
+        uint32_t tmp = 0;
+        ReadVirtualReg(REG_LMOTOR, &tmp);
+        ReadVirtualReg(REG_RMOTOR, &tmp);
+        WriteVirtualReg(REG_LMOTOR, &reg);
+        WriteVirtualReg(REG_RMOTOR, &reg);
+        TmpDuty += 64;
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+    }
 }
 
 int PrintHandlerForRead(void *param)

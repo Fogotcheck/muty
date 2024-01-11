@@ -159,15 +159,17 @@ int UpdateValLMotor(void *param)
 {
     uint32_t *val = (uint32_t *)param;
     int16_t NewDuty = (int16_t)*val;
-    printf("LM NewDuty::\t0x%x\r\n", NewDuty);
+    printf("RM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
     if (CheckMotorVal(NewDuty) != ESP_OK)
     {
         printf("LM Err\r\n");
         return ESP_FAIL;
     }
     SetReversMotor(NewDuty, MOTOR_LEFT);
-    NewDuty &= MOTOR_MASK_13BIT;
-
+    if (NewDuty < 0)
+    {
+        NewDuty *= -1;
+    }
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (uint32_t)NewDuty));
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
     return ESP_OK;
@@ -177,16 +179,28 @@ int UpdateValRMotor(void *param)
 {
     uint32_t *val = (uint32_t *)param;
     int16_t NewDuty = (int16_t)*val;
-    printf("RM NewDuty::\t0x%x\r\n", NewDuty);
+    printf("RM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
     if (CheckMotorVal(NewDuty) != ESP_OK)
     {
         printf("RM Err\r\n");
         return ESP_FAIL;
     }
     SetReversMotor(NewDuty, MOTOR_RIGHT);
-    NewDuty &= MOTOR_MASK_13BIT;
+    if (NewDuty < 0)
+    {
+        NewDuty *= -1;
+    }
 
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (uint32_t)NewDuty));
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
     return ESP_OK;
+}
+
+void CMotorErrorsHandler(void *RegErr)
+{
+    uint32_t *val = (uint32_t *)RegErr;
+    uint8_t CountErr = (uint8_t)(((uint32_t)*val >> 16));
+    CountErr++;
+    *val &= 0xff000000;
+    *val |= (0xee << 24) | (CountErr << 16);
 }

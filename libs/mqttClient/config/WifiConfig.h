@@ -14,4 +14,6 @@
 #define ESP_AP_MASK_ADDRESS "255.255.255.0"
 #define ESP_AP_GW_ADDRESS "192.168.0.100"
 
+#define PC_IP "mqtt://192.168.0.101"
+#define ESP32_CLIENT_NAME "ESP32_Username"
 #endif //__WifiConfig_h__

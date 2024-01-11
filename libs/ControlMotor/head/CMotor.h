@@ -7,4 +7,5 @@
 esp_err_t InitCMotor(void);
 int UpdateValLMotor(void *param);
 int UpdateValRMotor(void *param);
+void CMotorErrorsHandler(void *RegErr);
 #endif //__CMotor_h__
