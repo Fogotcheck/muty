@@ -3,15 +3,16 @@
 #include "VRKernel.h"
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
-void PubSubRegThread(void *arg);
 
 void SetTopicInString(char **TopicName, char **TopicVal, uint16_t NumReg);
-
+void WriteReadPubInReg(esp_mqtt_event_handle_t event, uint32_t *NumReg);
+void UpdqteAndSubAllReg(void);
+void UpdateReg(uint32_t NumReg);
+void UpdateAllReg(void);
 char TopicNameBuf[32];
 char TopicValBuf[32];
-EventGroupHandle_t PubSubEvent;
+
 esp_mqtt_client_handle_t client;
-uint32_t PubSubCount = 0;
 
 static const char *TAG = "MQTT";
 
@@ -25,7 +26,6 @@ static void log_error_if_nonzero(const char *message, int error_code)
 
 esp_err_t InitMqttClient(void)
 {
-    printf("Mqtt client start\r\n");
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MOSQUITTO_SERVER_URL,
         .broker.address.port = 1883,
@@ -39,63 +39,64 @@ esp_err_t InitMqttClient(void)
     {
         return ESP_FAIL;
     }
-    printf("Mqtt conf::\r\nlimit:\t%llu,out_size\t%d,size::\t%d\r\n", mqtt_cfg.outbox.limit, mqtt_cfg.buffer.out_size, mqtt_cfg.buffer.size);
 
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
-
-    PubSubEvent = xEventGroupCreate();
-    xTaskCreate(PubSubRegThread, "PubSubTask", 4096, NULL, 5, NULL);
 
     return ESP_OK;
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
     esp_mqtt_event_handle_t event = event_data;
     client = event->client;
+
+    uint32_t NumReg = 0;
+    static uint8_t SwitchFlagNeedUpdate = 0;
+    static uint32_t ErrCount = 0;
 
     switch ((esp_mqtt_event_id_t)event_id)
     {
     case MQTT_EVENT_CONNECTED:
     {
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-
-        char *TopicName = NULL;
-        char *TopicValue = NULL;
-
-        SetTopicInString(&TopicName, &TopicValue, PubSubCount);
-        if ((TopicName == NULL) || (TopicValue == NULL))
-        {
-            break;
-        }
-
-        esp_mqtt_client_publish(client, TopicName, TopicValue, 0, 1, 0);
-        esp_mqtt_client_subscribe(client, TopicName, 0);
-
+        SwitchFlagNeedUpdate = 0;
+        UpdqteAndSubAllReg();
         break;
     }
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-        PubSubCount = 0;
         break;
     case MQTT_EVENT_SUBSCRIBED:
-        PubSubCount += 4;
-        xEventGroupSetBits(PubSubEvent, CLIENT_SUB_EVENT_BIT);
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
         break;
     case MQTT_EVENT_UNSUBSCRIBED:
-        PubSubCount = 0;
         ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
         break;
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        SwitchFlagNeedUpdate = 0;
+        ErrCount = 0;
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
+
+        if (SwitchFlagNeedUpdate == 0)
+        {
+            WriteReadPubInReg(event, &NumReg);
+            UpdateReg(NumReg);
+            SwitchFlagNeedUpdate = 1;
+            break;
+        }
+        else
+        {
+            ErrCount++;
+        }
+        if (ErrCount >= CLIENT_NO_PUB_ERR)
+        {
+            SwitchFlagNeedUpdate = 0;
+        }
+
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -132,31 +133,70 @@ void SetTopicInString(char **TopicName, char **TopicVal, uint16_t NumReg)
     memcpy(TopicValBuf, tmp, strlen(tmp));
     memset(tmp, 0, sizeof(tmp));
 
-    __itoa(NumReg, tmp, 16);
+    __itoa(NumReg, tmp, 10);
     strcat(TopicNameBuf, tmp);
 
     *TopicName = TopicNameBuf;
     *TopicVal = TopicValBuf;
 }
 
-void PubSubRegThread(void *arg)
+void WriteReadPubInReg(esp_mqtt_event_handle_t event, uint32_t *NumReg)
+{
+    char TmpBuf[(sizeof(TOPIC_DEFAULT_VAL) << 1)] = {0};
+    memcpy(TmpBuf, event->topic, event->topic_len);
+    if (strstr(TmpBuf, TOPIC_DEFAULT_VAL) == NULL)
+    {
+        return;
+    }
+
+    *NumReg = atoi(&TmpBuf[sizeof(TOPIC_DEFAULT_VAL) - 1]);
+
+    memset(TmpBuf, 0, sizeof(TmpBuf));
+    memcpy(TmpBuf, event->data, event->data_len);
+    uint32_t RegVal = atoi(TmpBuf);
+
+    WriteVirtualReg(*NumReg, &RegVal);
+}
+
+void UpdqteAndSubAllReg(void)
 {
     char *TopicName = NULL;
     char *TopicValue = NULL;
-    while (1)
-    {
-        xEventGroupWaitBits(PubSubEvent, CLIENT_SUB_EVENT_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
+    uint32_t RegSize = 0;
+    ReadVirtualReg(SYS_MEM_SIZE, &RegSize);
 
-        SetTopicInString(&TopicName, &TopicValue, PubSubCount);
+    for (uint16_t i = 0; i < RegSize; i++)
+    {
+        SetTopicInString(&TopicName, &TopicValue, i);
         if ((TopicName == NULL) || (TopicValue == NULL))
         {
-            PubSubCount = 0;
             continue;
         }
 
-        esp_mqtt_client_publish(client, TopicName, TopicValue, 0, 1, 0);
-        esp_mqtt_client_subscribe(client, TopicName, 0);
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        esp_mqtt_client_publish(client, TopicName, TopicValue, 0, 0, 0);
+        esp_mqtt_client_subscribe(client, TopicName, 2);
     }
+}
+
+void UpdateAllReg(void)
+{
+    uint32_t RegSize = 0;
+    ReadVirtualReg(SYS_MEM_SIZE, &RegSize);
+
+    for (uint16_t i = 0; i < RegSize; i++)
+    {
+        UpdateReg(i);
+    }
+}
+
+void UpdateReg(uint32_t NumReg)
+{
+    char *TopicName = NULL;
+    char *TopicValue = NULL;
+    SetTopicInString(&TopicName, &TopicValue, NumReg);
+    if ((TopicName == NULL) || (TopicValue == NULL))
+    {
+        return;
+    }
+    esp_mqtt_client_publish(client, TopicName, TopicValue, 0, 2, 0);
 }

@@ -67,15 +67,7 @@ void app_main(void)
 
     Motor.HandForWrite = UpdateValRMotor;
     SetHandlerForReg(REG_RMOTOR, &Motor);
-    uint32_t tmp = 0;
-    for (uint32_t i = 0, j = 0; i < 128; i += 4, j++)
-    {
 
-        ReadVirtualReg(i, &tmp);
-        WriteVirtualReg(i, &tmp);
-        printf("j::%lu\treg[%lx]::\t0x%lx\r\n", j, i, tmp);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
     if ((InitWifiKernel() != ESP_OK) || (InitMqttClient() != ESP_OK))
     {
         while (1)
@@ -96,7 +88,7 @@ void app_main(void)
     }
 }
 
-void LedToggleThread(void *arg)
+void LedToggleThread(__attribute__((unused)) void *arg)
 {
     uint8_t LedState = 0;
     uint16_t pin = GPIO_GLED_PIN;
@@ -189,7 +181,7 @@ int PrintHandlerForRead(void *param)
 {
     uint32_t *val = (uint32_t *)param;
 
-    // printf("read::0x%8lx\r\n", *val);
+    printf("read::0x%8lx\r\n", *val);
     return 0;
 }
 
@@ -197,6 +189,6 @@ int PrintHandlerForWrite(void *param)
 {
     uint32_t *val = (uint32_t *)param;
 
-    // printf("write::0x%8lx\r\n", *val);
+    printf("write::0x%8lx\r\n", *val);
     return 0;
 }

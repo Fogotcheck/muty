@@ -18,5 +18,5 @@
 #define ESP32_CLIENT_NAME "ESP32_muty"
 #define TOPIC_DEFAULT_VAL "/muty/Reg/"
 
-
+#define CLIENT_NO_PUB_ERR 10
 #endif //__WifiConfig_h__

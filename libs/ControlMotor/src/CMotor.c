@@ -159,7 +159,7 @@ int UpdateValLMotor(void *param)
 {
     uint32_t *val = (uint32_t *)param;
     int16_t NewDuty = (int16_t)*val;
-    printf("RM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
+    printf("LM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
     if (CheckMotorVal(NewDuty) != ESP_OK)
     {
         printf("LM Err\r\n");
@@ -201,6 +201,6 @@ void CMotorErrorsHandler(void *RegErr)
     uint32_t *val = (uint32_t *)RegErr;
     uint8_t CountErr = (uint8_t)(((uint32_t)*val >> 16));
     CountErr++;
-    *val &= 0xff000000;
+    *val = 0;
     *val |= (0xee << 24) | (CountErr << 16);
 }
