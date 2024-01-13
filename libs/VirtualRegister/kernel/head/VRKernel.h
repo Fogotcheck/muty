@@ -15,8 +15,11 @@
 // todo VAL(addr) (*(uint32_t *) - change wor user type
 #define VAL(addr) (*(uint32_t *)(VirtMem.VirtMem + (uint32_t)(addr)))
 
+#define VR_OFSETT_SHIFT_BIT (VIRT_REG_USER_WORD_SIZE >> 1)
+#define COUNT(addr) (addr >> VR_OFSETT_SHIFT_BIT)
+
 int InitKernalRegsMap(VirtualMemoryConfig_t *VirtualMemConfig, VirtualPortConfig_t *VirtualPortConfigure);
 void DeInitKernalRegsMap(void);
-int SetHandlerForReg(uint32_t RegAddress,VirtualRegsHandlers_t *Handlers);
+int SetHandlerForReg(uint32_t RegAddress, VirtualRegsHandlers_t *Handlers);
 int GetHandlerForReg(uint32_t RegAddress, VirtualRegsHandlers_t **Handlers);
 #endif //__VirtualRegsMapHandler_h__

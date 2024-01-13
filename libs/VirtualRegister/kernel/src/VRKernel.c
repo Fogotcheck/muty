@@ -21,22 +21,22 @@ int InitKernalRegsMap(VirtualMemoryConfig_t *VirtualMemConfig, VirtualPortConfig
 
 int SetHandlerForReg(uint32_t RegAddress, VirtualRegsHandlers_t *Handlers)
 {
-    if ((VirtHandlers[RegAddress].HandForRead == NULL) &&
-        (VirtHandlers[RegAddress].HandForWrite == NULL) &&
-        (VirtHandlers[RegAddress].ErrHandler == NULL))
+    if ((VirtHandlers[COUNT(RegAddress)].HandForRead == NULL) &&
+        (VirtHandlers[COUNT(RegAddress)].HandForWrite == NULL) &&
+        (VirtHandlers[COUNT(RegAddress)].ErrHandler == NULL))
     {
         VAL(SYS_HANDLERS_COUNT)++;
     }
 
-    VirtHandlers[RegAddress].HandForRead = Handlers->HandForRead;
-    VirtHandlers[RegAddress].HandForWrite = Handlers->HandForWrite;
-    VirtHandlers[RegAddress].ErrHandler = Handlers->ErrHandler;
+    VirtHandlers[COUNT(RegAddress)].HandForRead = Handlers->HandForRead;
+    VirtHandlers[COUNT(RegAddress)].HandForWrite = Handlers->HandForWrite;
+    VirtHandlers[COUNT(RegAddress)].ErrHandler = Handlers->ErrHandler;
     return 0;
 }
 
 int GetHandlerForReg(uint32_t RegAddress, VirtualRegsHandlers_t **Handlers)
 {
-    *Handlers = &VirtHandlers[RegAddress];
+    *Handlers = &VirtHandlers[COUNT(RegAddress)];
     return VAL(SYS_HANDLERS_COUNT);
 }
 

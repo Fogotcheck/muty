@@ -57,14 +57,6 @@ void app_main(void)
 
     uint32_t version = 0;
     ReadVirtualReg(SYS_COMPILE_TIME, &version);
-    if ((InitWifiKernel() != ESP_OK) || (InitMqttClient() != ESP_OK))
-    {
-        while (1)
-        {
-            printf("error wifi accert\r\n");
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
-        }
-    }
 
     InitCMotor();
     VirtualRegsHandlers_t Motor;
@@ -75,6 +67,23 @@ void app_main(void)
 
     Motor.HandForWrite = UpdateValRMotor;
     SetHandlerForReg(REG_RMOTOR, &Motor);
+    uint32_t tmp = 0;
+    for (uint32_t i = 0, j = 0; i < 128; i += 4, j++)
+    {
+
+        ReadVirtualReg(i, &tmp);
+        WriteVirtualReg(i, &tmp);
+        printf("j::%lu\treg[%lx]::\t0x%lx\r\n", j, i, tmp);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    if ((InitWifiKernel() != ESP_OK) || (InitMqttClient() != ESP_OK))
+    {
+        while (1)
+        {
+            printf("error wifi accert\r\n");
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+        }
+    }
 
     xTaskCreate(LedToggleThread, "LedTask", 2596, NULL, 5, NULL);
     // xTaskCreate(TestMotorThread, "MotorTask", 2048, NULL, 4, NULL);
@@ -113,6 +122,8 @@ void LedToggleThread(void *arg)
 
 int CreateMyMutex(void **MutexHandel)
 {
+    static uint8_t CountMutex = 0;
+    printf("Count::%d\r\n", CountMutex++);
     SemaphoreHandle_t *handel = (SemaphoreHandle_t *)*MutexHandel;
     *handel = xSemaphoreCreateMutex();
     if (*handel == NULL)
@@ -132,6 +143,7 @@ int RemoveMyMutex(void **MutexHandel)
 
 int LockMyMutex(void *MutexHandel)
 {
+    // printf("Lock\r\n");
     SemaphoreHandle_t *handel = (SemaphoreHandle_t *)MutexHandel;
 
     if (xSemaphoreTake(*handel, portMAX_DELAY) == pdTRUE)
@@ -143,6 +155,7 @@ int LockMyMutex(void *MutexHandel)
 
 int UnlockMyMutex(void *MutexHandel)
 {
+    // printf("UnLock\r\n");
     SemaphoreHandle_t *handel = (SemaphoreHandle_t *)MutexHandel;
     if (xSemaphoreGive(*handel) == pdTRUE)
     {
@@ -176,7 +189,7 @@ int PrintHandlerForRead(void *param)
 {
     uint32_t *val = (uint32_t *)param;
 
-    printf("read::0x%8lx\r\n", *val);
+    // printf("read::0x%8lx\r\n", *val);
     return 0;
 }
 
@@ -184,6 +197,6 @@ int PrintHandlerForWrite(void *param)
 {
     uint32_t *val = (uint32_t *)param;
 
-    printf("write::0x%8lx\r\n", *val);
+    // printf("write::0x%8lx\r\n", *val);
     return 0;
 }

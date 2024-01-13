@@ -13,3 +13,4 @@ target_include_directories(ClientKernel PUBLIC
     "${WifiKernlConfig}")
 
 target_link_libraries(ClientKernel PRIVATE ${COMPONENT_LIB})
+target_link_libraries(ClientKernel INTERFACE VirtualRegister)

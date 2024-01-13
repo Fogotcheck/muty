@@ -116,23 +116,23 @@ void HandlerWriteGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 {
     uint32_t ret = 0;
     VAL(VirtRegAddress) = *VirtualRegValue;
-    if (VirtHandlers[VirtRegAddress].HandForWrite != NULL)
+    if (VirtHandlers[COUNT(VirtRegAddress)].HandForWrite != NULL)
     {
         if (SynchronMemAccess(VirtRegAddress))
         {
             return;
         }
-        VirtHandlers[VirtRegAddress].state.bit.write = 1;
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.write = 1;
 
-        ret = VirtHandlers[VirtRegAddress].HandForWrite((void *)&VAL(VirtRegAddress));
+        ret = VirtHandlers[COUNT(VirtRegAddress)].HandForWrite((void *)&VAL(VirtRegAddress));
         if (ret)
         {
             ErrHadlerGO(VirtRegAddress);
             return;
         }
-        VirtHandlers[VirtRegAddress].state.bit.write = 0;
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.write = 0;
 #if USE_MUTEX == 1
-        ret = VirtualPortUnlockMutex(VirtHandlers[VirtRegAddress].MutexHandel);
+        ret = VirtualPortUnlockMutex(VirtHandlers[COUNT(VirtRegAddress)].MutexHandel);
         if (ret)
         {
             ErrHadlerGO(VirtRegAddress);
@@ -165,21 +165,21 @@ void HandlerReadGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 {
     uint32_t ret = 0;
     *VirtualRegValue = VAL(VirtRegAddress);
-    if (VirtHandlers[VirtRegAddress].HandForRead != NULL)
+    if (VirtHandlers[COUNT(VirtRegAddress)].HandForRead != NULL)
     {
         if (SynchronMemAccess(VirtRegAddress))
         {
             return;
         }
-        VirtHandlers[VirtRegAddress].state.bit.read = 1;
-        ret = VirtHandlers[VirtRegAddress].HandForRead((void *)&VAL(VirtRegAddress));
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.read = 1;
+        ret = VirtHandlers[COUNT(VirtRegAddress)].HandForRead((void *)&VAL(VirtRegAddress));
         if (ret)
         {
             ErrHadlerGO(VirtRegAddress);
         }
-        VirtHandlers[VirtRegAddress].state.bit.read = 0;
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.read = 0;
 #if USE_MUTEX == 1
-        ret = VirtualPortUnlockMutex(VirtHandlers[VirtRegAddress].MutexHandel);
+        ret = VirtualPortUnlockMutex(VirtHandlers[COUNT(VirtRegAddress)].MutexHandel);
         if (ret)
         {
             ErrHadlerGO(VirtRegAddress);
@@ -193,15 +193,15 @@ void HandlerReadGO(uint32_t VirtRegAddress, uint32_t *VirtualRegValue)
 int SynchronMemAccess(uint32_t VirtRegAddress)
 {
     uint32_t ErrCount = MAX_WAIT_COUNT_DELAY;
-    while (VirtHandlers[VirtRegAddress].state.byte)
+    while (VirtHandlers[COUNT(VirtRegAddress)].state.byte)
     {
         VirtualPortDelay(USER_DELAY_FOR_READ);
         ErrCount--;
     }
     if (ErrCount == 0)
     {
-        VirtHandlers[VirtRegAddress].state.bit.Error = 1;
-        VirtHandlers[VirtRegAddress].state.bit.lock = 1;
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.Error = 1;
+        VirtHandlers[COUNT(VirtRegAddress)].state.bit.lock = 1;
         VirtualSynchonErrCallback(VirtRegAddress);
         return -1;
     }
@@ -210,7 +210,7 @@ int SynchronMemAccess(uint32_t VirtRegAddress)
 #elif USE_MUTEX == 1
 int SynchronMemAccess(uint32_t VirtRegAddress)
 {
-    return VirtualPortLockMutex(VirtHandlers[VirtRegAddress].MutexHandel);
+    return VirtualPortLockMutex(VirtHandlers[COUNT(VirtRegAddress)].MutexHandel);
 }
 #endif
 
@@ -218,15 +218,15 @@ void ErrHadlerGO(uint32_t VirtRegAddress)
 {
     VAL(SYS_ERRORS_COUNT)
     ++;
-    VirtHandlers[VirtRegAddress].state.bit.Error = 1;
-    if (VirtHandlers[VirtRegAddress].ErrHandler == NULL)
+    VirtHandlers[COUNT(VirtRegAddress)].state.bit.Error = 1;
+    if (VirtHandlers[COUNT(VirtRegAddress)].ErrHandler == NULL)
     {
         return;
     }
-    VirtHandlers[VirtRegAddress].ErrHandler(&VAL(VirtRegAddress));
-    VirtHandlers[VirtRegAddress].state.bit.Error = 0;
+    VirtHandlers[COUNT(VirtRegAddress)].ErrHandler(&VAL(VirtRegAddress));
+    VirtHandlers[COUNT(VirtRegAddress)].state.bit.Error = 0;
 #if USE_MUTEX == 1
-    VirtualPortUnlockMutex(VirtHandlers[VirtRegAddress].MutexHandel);
+    VirtualPortUnlockMutex(VirtHandlers[COUNT(VirtRegAddress)].MutexHandel);
 #endif
 }
 
