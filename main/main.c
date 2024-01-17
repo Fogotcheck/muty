@@ -68,6 +68,13 @@ void app_main(void)
     Motor.HandForWrite = UpdateValRMotor;
     SetHandlerForReg(REG_RMOTOR, &Motor);
 
+    VirtualRegsHandlers_t MqttPeriod;
+    /* todo make All err handler*/
+    MqttPeriod.ErrHandler = CMotorErrorsHandler;
+    MqttPeriod.HandForRead = PrintHandlerForRead;
+    MqttPeriod.HandForWrite = MqttRegHandler;
+    SetHandlerForReg(REG_MQTT_PERIOD, &MqttPeriod);
+
     if ((InitWifiKernel() != ESP_OK) || (InitMqttClient() != ESP_OK))
     {
         while (1)

@@ -159,10 +159,8 @@ int UpdateValLMotor(void *param)
 {
     uint32_t *val = (uint32_t *)param;
     int16_t NewDuty = (int16_t)*val;
-    printf("LM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
     if (CheckMotorVal(NewDuty) != ESP_OK)
     {
-        printf("LM Err\r\n");
         return ESP_FAIL;
     }
     SetReversMotor(NewDuty, MOTOR_LEFT);
@@ -179,10 +177,8 @@ int UpdateValRMotor(void *param)
 {
     uint32_t *val = (uint32_t *)param;
     int16_t NewDuty = (int16_t)*val;
-    printf("RM NewDuty::\t0x%hx\tval::\t0x%lx\r\n", NewDuty, *val);
     if (CheckMotorVal(NewDuty) != ESP_OK)
     {
-        printf("RM Err\r\n");
         return ESP_FAIL;
     }
     SetReversMotor(NewDuty, MOTOR_RIGHT);
