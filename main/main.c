@@ -10,9 +10,10 @@
 #include "WiFiKernel.h"
 #include "MqttClient.h"
 #include "CMotor.h"
+#include "D74HC595Kernel.h"
 
 /* Private typedef -----------------------------------------------------------*/
-#define GPIO_GLED_PIN 38
+#define GPIO_GLED_PIN 48
 /* END Private typedef */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,6 +83,10 @@ void app_main(void)
             printf("error wifi accert\r\n");
             vTaskDelay(5000 / portTICK_PERIOD_MS);
         }
+    }
+    if (InitD74HC595())
+    {
+        printf("Error 74HC595\r\n");
     }
 
     xTaskCreate(LedToggleThread, "LedTask", 2596, NULL, 5, NULL);

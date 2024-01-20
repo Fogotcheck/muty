@@ -1,13 +1,13 @@
 #ifndef __CMotorConfig_h__
 #define __CMotorConfig_h__
 
-#define MOTOR_PIN_AIN1 20
-#define MOTOR_PIN_AIN2 19
-#define MOTOR_PIN_BIN1 18
-#define MOTOR_PIN_BIN2 17
+#define MOTOR_PIN_AIN1 37
+#define MOTOR_PIN_AIN2 38
+#define MOTOR_PIN_BIN1 40
+#define MOTOR_PIN_BIN2 41
 
-#define MOTOR_PIN_PWMA 35
-#define MOTOR_PIN_PWMB 36
+#define MOTOR_PIN_PWMA 36
+#define MOTOR_PIN_PWMB 42
 
 #define DUTY_START 0
 #define MAX_MOTOR_VALUE 8192  /* LEDC_TIMER_13_BIT // Set duty resolution to 13 bits */
